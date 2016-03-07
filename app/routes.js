@@ -46,6 +46,15 @@ module.exports = function(app, passport) {
     // process the signup form
     // app.post('/signup', do all our passport stuff here);
 
+    app.get('/auth/facebook', passport.authenticate('facebook', { scope: 'email' }));
+
+    app.get('/auth/facebook/callback',
+        passport.authenticate('facebook', {
+            successRedirect: '/profile',
+            failureRedirect: '/'
+        })
+    );
+
     // =====================================
     // PROFILE SECTION =====================
     // =====================================

@@ -1,3 +1,3 @@
 module.exports = {
-    url: 'mongodb://localhost/mean-dev'
+    url: 'mongodb://localhost/nodejs-authentication'
 };

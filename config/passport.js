@@ -1,5 +1,7 @@
 var LocalStrategy = require('passport-local').Strategy;
+var FacebookStrategy = require('passport-facebook').Strategy;
 var User = require('../app/models/user');
+var config = require('../config/auth');
 
 module.exports = function (passport) {
     passport.serializeUser(function (user, done) {
@@ -26,17 +28,17 @@ module.exports = function (passport) {
                 if (user) {
                     done(null, false, req.flash('signupMessage', 'That email is already'));
                 } else {
-                    var user = new User();
+                    var newUser = new User();
 
-                    user.local.username = email;
-                    user.local.password = user.generateHash(password);
+                    newUser.local.username = email;
+                    newUser.local.password = newUser.generateHash(password);
 
-                    user.save(function (err, user) {
+                    newUser.save(function (err) {
                         if (err) {
                             throw err;
                         }
 
-                        return done(null, user);
+                        return done(null, newUser);
                     });
                 }
             });
@@ -46,7 +48,8 @@ module.exports = function (passport) {
     passport.use('local-login', new LocalStrategy({
         usernameField: 'email',
         passwordField: 'password',
-        passReqToCallback: true
+        passReqToCallback: true,
+        profileFields: ['email']
     }, function (req, email, password, done) {
         User.findOne({ 'local.username' :  email }, function(err, user) {
             // if there are any errors, return the error before anything else
@@ -64,5 +67,38 @@ module.exports = function (passport) {
             // all is well, return successful user
             return done(null, user);
         });
-    }))
+    }));
+
+    passport.use(new FacebookStrategy({
+        clientID: config.facebookAuth.clientID,
+        clientSecret: config.facebookAuth.clientSecret,
+        callbackURL: config.facebookAuth.callbackURL
+    }, function (accessToken, refreshToken, profile, done) {
+        process.nextTick(function () {
+            User.findOne({'facebook.id': profile.id}, function (err, user) {
+                if (err) {
+                    return done(err);
+                }
+
+                if (user) {
+                    return done(null, user);
+                } else {
+                    var newUser = new User();
+
+                    newUser.facebook.id = profile.id;
+                    newUser.facebook.token = accessToken;
+                    newUser.facebook.email = profile.id + '@facebook.com';//profile.emails[0].value;
+                    newUser.facebook.name = profile.displayName;
+
+                    newUser.save(function (err, user) {
+                        if (err) {
+                            throw err;
+                        }
+
+                        return done(null, user);
+                    });
+                }
+            });
+        });
+    }));
 };
